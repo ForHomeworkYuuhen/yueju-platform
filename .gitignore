@@ -1,0 +1,11 @@
+**/node_modules/
+**/backups/
+运行截图/
+.claude/
+*.py
+*.zip
+*.db-wal
+*.db-shm
+~$*
+Thumbs.db
+.DS_Store

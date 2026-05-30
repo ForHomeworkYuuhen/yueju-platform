@@ -1,0 +1,27 @@
+{
+  "name": "nanguo-hongdou",
+  "version": "2.0.0",
+  "private": true,
+  "description": "南国红豆 · 粤剧文化传承平台（Node + SQLite 真实后端 + Vue3/Vant 前端）",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/password.test.js",
+    "seed": "node server/seed.js",
+    "scrape": "node server/scrape.js",
+    "fetch-media": "node server/fetch-media.js",
+    "reset": "node server/seed.js --force",
+    "backup": "node server/backup.js",
+    "loadtest": "node server/loadtest.js",
+    "loadtest:quick": "node server/loadtest.js --requests=500 --sweep=1,10,50"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
