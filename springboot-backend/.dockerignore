@@ -1,0 +1,6 @@
+target/
+sql/
+_run.log
+_run.err
+_export_mysql.py
+*.md

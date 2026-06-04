@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: yueju-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: yueju123
+      MYSQL_DATABASE: yueju
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - yueju-mysql-data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pyueju123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: yueju-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    container_name: yueju-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: yueju
+      MYSQL_USER: root
+      MYSQL_PASSWORD: yueju123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  yueju-mysql-data:

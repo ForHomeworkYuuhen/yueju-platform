@@ -1,0 +1,47 @@
+server:
+  port: 3000
+
+spring:
+  application:
+    name: yueju-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:yueju}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:yueju123}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
+  jackson:
+    property-naming-strategy: SNAKE_CASE   # 实体序列化为 snake_case，兼容前端既有契约
+    default-property-inclusion: always
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: input
+
+# JWT 配置
+app:
+  jwt:
+    secret: ${JWT_SECRET:nanguo-hongdou-yueju-jwt-secret-key-please-change-in-prod-0123456789}
+    expire-minutes: ${JWT_EXPIRE_MINUTES:10080}   # 7 天
+  llm:
+    base-url: ${LLM_BASE_URL:https://tbnx.plus7.plus/v1}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:deepseek-v3.2}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    com.nghd.yueju: info
