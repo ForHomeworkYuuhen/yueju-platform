@@ -12,7 +12,8 @@ Thumbs.db
 
 # 构建产物 / 运行日志
 **/target/
-springboot-backend/_run.log
-springboot-backend/_run.err
+**/_run.log
+**/_run.err
+**/_test.log
 .mvn/
 *.class
