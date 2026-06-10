@@ -11,6 +11,7 @@ import com.nghd.yueju.mapper.AuditLogMapper;
 import com.nghd.yueju.mapper.ShowEventMapper;
 import com.nghd.yueju.mapper.ShowSignupMapper;
 import com.nghd.yueju.security.AuthUser;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -28,15 +29,18 @@ public class AdminService {
     private final AuditLogMapper auditLogMapper;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public AdminService(AdminMapper adminMapper, ShowEventMapper eventMapper, ShowSignupMapper signupMapper,
-                        AuditLogMapper auditLogMapper, EventService eventService, JdbcTemplate jdbc) {
+                        AuditLogMapper auditLogMapper, EventService eventService, JdbcTemplate jdbc,
+                        RedisTemplate<String, Object> redisTemplate) {
         this.adminMapper = adminMapper;
         this.eventMapper = eventMapper;
         this.signupMapper = signupMapper;
         this.auditLogMapper = auditLogMapper;
         this.eventService = eventService;
         this.jdbc = jdbc;
+        this.redisTemplate = redisTemplate;
     }
 
     public Map<String, Object> overview() {
@@ -59,6 +63,10 @@ public class AdminService {
         e.setReviewedAt(Ids.now());
         eventMapper.updateById(e);
         audit(admin, "review_event", id + " -> " + status);
+
+        // 清除演出列表缓存
+        redisTemplate.delete("cache:shows:approved");
+
         return Map.of("ok", true, "event", eventService.mapEvent(eventMapper.selectById(id)));
     }
 

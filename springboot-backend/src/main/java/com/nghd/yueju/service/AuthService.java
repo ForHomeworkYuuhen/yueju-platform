@@ -152,7 +152,10 @@ public class AuthService {
             log.setUsername(username);
             log.setAction(action);
             auditLogMapper.insert(log);
-        } catch (Exception ignored) {
+            System.out.println("=== 审计日志写入成功：action=" + action + ", username=" + username);
+        } catch (Exception e) {
+            System.err.println("=== 审计日志写入失败：action=" + action + ", error=" + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

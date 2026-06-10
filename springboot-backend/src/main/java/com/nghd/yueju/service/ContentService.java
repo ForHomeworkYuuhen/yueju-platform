@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nghd.yueju.common.exception.BusinessException;
 import com.nghd.yueju.mapper.ContentMapper;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -18,11 +20,15 @@ public class ContentService {
 
     private final ContentMapper mapper;
     private final CategoryService category;
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public ContentService(ContentMapper mapper, CategoryService category) {
+    public ContentService(ContentMapper mapper, CategoryService category,
+                          RedisTemplate<String, Object> redisTemplate) {
         this.mapper = mapper;
         this.category = category;
+        this.json = new ObjectMapper();
+        this.redisTemplate = redisTemplate;
     }
 
     /* ---------------- 剧目 ---------------- */
@@ -51,6 +57,18 @@ public class ContentService {
 
     public List<Map<String, Object>> listOperas(String genre, String era, String troupe,
                                                 String role, String kw, String sort, String learn) {
+        // 热门剧目列表使用缓存（sort=hot 或 popularity 且无其他筛选条件）
+        boolean isHot = ("hot".equals(sort) || "popularity".equals(sort)) && genre == null && era == null && troupe == null
+                && role == null && (kw == null || kw.isBlank()) && learn == null;
+        if (isHot) {
+            String cacheKey = "cache:operas:hot";
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> cached = (List<Map<String, Object>>) redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+        }
+
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Map<String, Object> o : mapper.listOperas(genre, era, troupe)) rows.add(mapOpera(o));
 
@@ -84,6 +102,12 @@ public class ContentService {
         rows.sort((a, b) -> byPremiere
                 ? num(a.get("premiere")) - num(b.get("premiere"))
                 : num(b.get("popularity")) - num(a.get("popularity")));
+
+        // 缓存热门剧目列表
+        if (isHot) {
+            redisTemplate.opsForValue().set("cache:operas:hot", rows, 30, TimeUnit.MINUTES);
+        }
+
         return rows;
     }
 
@@ -119,7 +143,18 @@ public class ContentService {
     }
 
     public List<Map<String, Object>> listArtists() {
-        return mapper.listArtists().stream().map(this::mapArtist).collect(Collectors.toList());
+        String cacheKey = "cache:artists";
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> cached = (List<Map<String, Object>>) redisTemplate.opsForValue().get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        List<Map<String, Object>> result = mapper.listArtists().stream()
+                .map(this::mapArtist).collect(Collectors.toList());
+
+        redisTemplate.opsForValue().set(cacheKey, result, 30, TimeUnit.MINUTES);
+        return result;
     }
 
     public Map<String, Object> getArtist(String id) {

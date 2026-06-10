@@ -9,9 +9,11 @@ import com.nghd.yueju.entity.ShowSignup;
 import com.nghd.yueju.mapper.ShowEventMapper;
 import com.nghd.yueju.mapper.ShowSignupMapper;
 import com.nghd.yueju.security.AuthUser;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 公开演出：申请 → 审核 → 报名。
@@ -22,11 +24,14 @@ public class EventService {
     private final ShowEventMapper eventMapper;
     private final ShowSignupMapper signupMapper;
     private final ObjectMapper json;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public EventService(ShowEventMapper eventMapper, ShowSignupMapper signupMapper, ObjectMapper json) {
+    public EventService(ShowEventMapper eventMapper, ShowSignupMapper signupMapper,
+                        ObjectMapper json, RedisTemplate<String, Object> redisTemplate) {
         this.eventMapper = eventMapper;
         this.signupMapper = signupMapper;
         this.json = json;
+        this.redisTemplate = redisTemplate;
     }
 
     @SuppressWarnings("unchecked")
@@ -46,9 +51,20 @@ public class EventService {
 
     public List<Map<String, Object>> listShows(String status) {
         String st = status == null ? "approved" : status;
-        return eventMapper.selectList(new QueryWrapper<ShowEvent>()
+        String cacheKey = "cache:shows:" + st;
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> cached = (List<Map<String, Object>>) redisTemplate.opsForValue().get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        List<Map<String, Object>> result = eventMapper.selectList(new QueryWrapper<ShowEvent>()
                 .eq("status", st).orderByAsc("date").orderByAsc("time"))
                 .stream().map(this::mapEvent).toList();
+
+        redisTemplate.opsForValue().set(cacheKey, result, 30, TimeUnit.MINUTES);
+        return result;
     }
 
     public List<Map<String, Object>> allShows() {
@@ -107,6 +123,10 @@ public class EventService {
         e.setReviewNote("");
         e.setCreated(Ids.now());
         eventMapper.insert(e);
+
+        // 清除演出列表缓存
+        redisTemplate.delete("cache:shows:approved");
+
         return Map.of("ok", true, "event", mapEvent(e));
     }
 
